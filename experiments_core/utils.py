@@ -25,14 +25,27 @@ def _finite_vector(v: np.ndarray, name: str) -> None:
 def clip_vector_to_norm(v: np.ndarray, max_norm: float) -> np.ndarray:
     _finite_vector(v, "v")
     max_norm = finite_float(max_norm, "max_norm", positive=True)
-    norm = float(np.linalg.norm(v))
-    if norm <= max_norm or norm == 0.0:
+    return _project_to_ball(v, max_norm)
+
+
+def _project_to_ball(v: np.ndarray, radius: float) -> np.ndarray:
+    norm_value = np.linalg.norm(v)
+    norm = float(norm_value)
+    # Squaring tiny components can underflow even when the computed norm is
+    # nonzero. Keep the usual arithmetic outside that range.
+    if np.isfinite(norm) and norm >= np.sqrt(np.finfo(norm_value.dtype).tiny):
+        if norm <= radius:
+            return v
+        return (radius / norm) * v
+
+    scale = float(np.max(np.abs(v), initial=0.0))
+    if scale == 0.0:
         return v
-    if not np.isfinite(norm):
-        scale = float(np.max(np.abs(v)))
-        unit = v / scale
-        return (max_norm / np.linalg.norm(unit)) * unit
-    return (max_norm / norm) * v
+    unit = v / scale
+    unit_norm = float(np.linalg.norm(unit))
+    if scale <= radius / unit_norm:
+        return v
+    return (radius / unit_norm) * unit
 
 
 def top_m_binary(scores: np.ndarray, m: int) -> np.ndarray:
@@ -52,33 +65,39 @@ def top_m_binary(scores: np.ndarray, m: int) -> np.ndarray:
 def euclidean_ball_projection(v: np.ndarray, radius: float) -> np.ndarray:
     _finite_vector(v, "v")
     radius = finite_float(radius, "radius", positive=True)
-    norm = float(np.linalg.norm(v))
-    if norm <= radius or norm == 0.0:
-        return v
-    if not np.isfinite(norm):
-        scale = float(np.max(np.abs(v)))
-        unit = v / scale
-        return (radius / np.linalg.norm(unit)) * unit
-    return (radius / norm) * v
+    return _project_to_ball(v, radius)
 
 
-def _validate_kernel_input(x_hist: np.ndarray, x: np.ndarray) -> None:
+def _validate_kernel_input(x_hist: np.ndarray, x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     if not isinstance(x_hist, np.ndarray) or not isinstance(x, np.ndarray) or x_hist.ndim != 2 or x.ndim != 1:
         raise ValueError("x_hist must be 2D and x must be 1D.")
-    if not np.isfinite(x_hist).all() or not np.isfinite(x).all():
-        raise ValueError("Kernel inputs must be finite")
     if x_hist.shape[1] != x.shape[0]:
         raise ValueError("dimension mismatch between x_hist and x.")
+    if x_hist.dtype.kind not in "iuf" or x.dtype.kind not in "iuf":
+        raise ValueError("Kernel inputs must be real numeric arrays")
+    # Convert before subtraction or matrix multiplication to avoid integer
+    # overflow. Float64 inputs retain their original values and storage.
+    with np.errstate(over="raise", invalid="raise"):
+        x_hist = np.asarray(x_hist, dtype=np.float64)
+        x = np.asarray(x, dtype=np.float64)
+    if not np.isfinite(x_hist).all() or not np.isfinite(x).all():
+        raise ValueError("Kernel inputs must be finite in float64")
+    return x_hist, x
 
 
 def rbf_kernel_vector(x_hist: np.ndarray, x: np.ndarray, sigma: float) -> np.ndarray:
-    """Return k(x_i, x) for each row x_i in x_hist with RBF kernel."""
-    _validate_kernel_input(x_hist, x)
+    """Return the RBF kernel in float64 for finite real numeric arrays.
+
+    Raise FloatingPointError if a coordinate difference exceeds float64 range.
+    """
+    x_hist, x = _validate_kernel_input(x_hist, x)
     sigma = finite_float(sigma, "sigma", positive=True)
+    with np.errstate(over="raise", invalid="raise"):
+        diff = x_hist - x[None, :]
     # Dividing before squaring also handles tiny positive bandwidths at x_i=x.
     # Overflow in a nonzero squared distance correctly gives a zero kernel value.
     with np.errstate(over="ignore", under="ignore"):
-        diff = (x_hist - x[None, :]) / sigma
+        diff = diff / sigma
         sq = np.sum(diff * diff, axis=1)
         return np.exp(-0.5 * sq)
 
@@ -90,13 +109,20 @@ def poly_kernel_vector(
     coef0: float,
     alpha: float = 1.0,
 ) -> np.ndarray:
-    """Return k(x_i, x) for each row x_i in x_hist with polynomial kernel."""
-    _validate_kernel_input(x_hist, x)
+    """Return the polynomial kernel in float64 for finite real numeric arrays.
+
+    Raise FloatingPointError when an intermediate value exceeds float64 range.
+    """
+    x_hist, x = _validate_kernel_input(x_hist, x)
     degree = integer(degree, "degree", minimum=1)
     alpha = finite_float(alpha, "alpha", positive=True)
     coef0 = finite_float(coef0, "coef0", nonnegative=True)
     with np.errstate(over="raise", invalid="raise"):
-        return np.power(alpha * (x_hist @ x) + coef0, degree)
+        dot = x_hist @ x
+        # BLAS matrix products do not always honor NumPy's error-state flags.
+        if not np.isfinite(dot).all():
+            raise FloatingPointError("Polynomial kernel dot product exceeds float64 range")
+        return np.power(alpha * dot + coef0, degree)
 
 
 def kernel_vector(

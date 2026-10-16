@@ -16,8 +16,8 @@ class BaseLearner(ABC):
     name : str
         Human-readable algorithm name, used as a label in output DataFrames.
     hyperparams : dict
-        Key-value pairs logged to the seed-level summary CSV (for reproducibility).
-        Not used for computation.
+        Method metadata for inspection, not used for computation. Experiment
+        settings are saved separately in resolved_config.yaml.
     projection_events : int
         Cumulative number of rounds in which a nontrivial Mahalanobis projection was triggered.
         Subclasses increment this counter inside :meth:`update` whenever such a

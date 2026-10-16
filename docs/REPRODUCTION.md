@@ -114,6 +114,11 @@ The data manifest identifies the source revision used for measurement, its
 source-file hashes, the measured environment, and data-file checksums. This
 identity is preserved when packaging and plotting code are updated.
 
+Public revision `b630751b756fe23a986e0b8b1901011e77aea9c6` contains the same
+numerical helpers (`experiments_core/utils.py`) as that measurement source.
+Later fixes to kernel input handling and tiny-vector clipping are not reflected
+in the bundled runtime measurements.
+
 ```bash
 .venv/bin/python scripts/build_paper_figures.py --out-root figures/paper
 ```
@@ -187,6 +192,12 @@ The tests compare KONS projections with an independent finite-feature primal
 solution, including rank-deficient feature sets, and compare linear-kernel KONS
 with finite-dimensional ONS. Numerical input and accuracy checks reject invalid
 updates or unsuccessful solves instead of silently substituting another update.
+
+Kernel helpers accept finite real integer or floating-point arrays and compute
+in float64. They reject nonnumeric, Boolean, and complex arrays. A coordinate
+difference that cannot be represented in float64 raises an error; a representable
+RBF difference with an extremely large scaled distance may yield a zero kernel
+value. Polynomial-kernel intermediate overflow also raises an error.
 
 ## Runtime measurement
 

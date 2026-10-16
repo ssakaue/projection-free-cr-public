@@ -310,7 +310,9 @@ def resolve_config(
     kernel_cfg["alpha"] = kernel_alpha
     kernel_cfg["coeff_std"] = kernel_coeff_std
     kernel_cfg["true_weight_norm"] = kernel_true_weight_norm
-    # Under RKHS post-normalization, coeff_std controls only pre-normalization random shape.
+    # coeff_std is the coefficient sampling scale before RKHS normalization;
+    # true_weight_norm sets the final norm. Retain the existing role identifier
+    # for compatibility with saved configurations.
     kernel_cfg["coeff_std_role"] = "pre_norm_shape_only"
     kernel_cfg["true_weight_norm_role"] = "rkhs_norm_target"
     dcfg["kernel"] = kernel_cfg
