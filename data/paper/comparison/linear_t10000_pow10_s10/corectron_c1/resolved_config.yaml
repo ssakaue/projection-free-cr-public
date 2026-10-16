@@ -1,0 +1,128 @@
+experiment:
+  name: main_linear_t10000_s10
+  horizon: 10000
+  seeds:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  progress_every: 1000
+normalization:
+  enabled: true
+  policy: set_level
+  target_action_residual_l2: 1.0
+  target_context_l2: 1.0
+  action_scale: 0.31622776601683794
+  context_scale: 1.0
+  residual_l2_raw: 3.1622776601683795
+  context_l2_raw: 1.0
+  residual_l2_normalized: 1.0
+  context_l2_normalized: 1.0
+dataset:
+  model_type: linear_contextual
+  action_dim: 10
+  context_dim: 10
+  m_select: 5
+  context_norm: 1.0
+  linear:
+    true_weight_norm: 1.0
+  action_set_type: m_out_of_n
+  action_scale: 0.31622776601683794
+  context_scale: 1.0
+  context_norm_raw: 1.0
+  residual_l2_max_raw: 3.1622776601683795
+  residual_l2_max: 1.0
+  dim_h_linear: 100
+  d_ref: 100
+  g_bound_linear: 1.0
+  kernel:
+    kernel_type: rbf
+    sigma_true: 1.0
+    degree: 2
+    coef0: 0.0
+    alpha: 1.0
+    coeff_std: 1.0
+    true_weight_norm: 1.0
+    coeff_std_role: pre_norm_shape_only
+    true_weight_norm_role: rkhs_norm_target
+    num_centers: 16
+learners:
+  corectron:
+    enabled: true
+    lambda_reg: 100.0
+    b_payoff: 1.0
+    lambda_base: 100.0
+    lambda_reg_theory: 100.0
+  ons:
+    enabled: false
+    domain_radius: 1.0
+    ons_lr: 2.0
+    epsilon: 100.0
+    proj_tol: 1.0e-10
+    h_bound: 2.0
+    g_bound: 1.0
+    eta_fixed: 0.1
+    gamma_theory: 0.5102040816326532
+    ons_lr_theory: 1.9599999999999995
+    gamma_used: 0.5
+    epsilon_base: 25.0
+    epsilon_theory: 100.0
+    true_comparator_in_domain: true
+  ogd:
+    enabled: false
+    domain_radius: 1.0
+    step0: 0.02
+    schedule: constant
+    d_bound: 2.0
+    g_bound: 1.0
+    step_base: 2.0
+    ogd_lr_theory: 0.02
+  corectron_rbf:
+    enabled: false
+    kernel_type: rbf
+    kernel_sigma: 1.0
+    kernel_degree: 2
+    kernel_coef0: 0.0
+    kernel_alpha: 1.0
+    kappa: 1.0
+    g_bound: 1.0
+    b_payoff: 1.0
+    lambda_base: 100.0
+    lambda_reg_theory: 100.0
+    lambda_reg: 100.0
+  kons:
+    enabled: false
+    kernel_type: rbf
+    kernel_sigma: 1.0
+    kernel_degree: 2
+    kernel_coef0: 0.0
+    kernel_alpha: 1.0
+    kappa: 1.0
+    x_diameter: 1.0
+    g_bound: 1.0
+    h_bound: 2.0
+    eta_fixed: 0.1
+    gamma_theory: 0.5102040816326532
+    kons_lr_theory: 1.9599999999999995
+    kons_lr: 2.0
+    gamma_used: 0.5
+    lambda_eff: 100.0
+    d_cap_linear_proxy: 100
+    d_cap_kernel_upper: 100
+    epsilon_base: 25.0
+    epsilon_theory: 100.0
+    epsilon: 100.0
+    proj_tol: 1.0e-10
+    true_comparator_in_domain: null
+runtime:
+  save_round_metrics: true
+user_policy:
+  subopt_prob: 0.0
+  subopt_mode: uniform
+  subopt_noise_std: 0.0

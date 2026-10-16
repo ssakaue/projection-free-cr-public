@@ -1,0 +1,8 @@
+# Validated top-level package versions for this release bundle under Python 3.11.
+# This is not a full lockfile, but it records the exact top-level dependency
+# versions used to validate the public release package.
+numpy==2.4.3
+pandas==3.0.1
+matplotlib==3.10.8
+PyYAML==6.0.3
+scipy==1.17.1
